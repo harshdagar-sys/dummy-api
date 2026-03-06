@@ -10,7 +10,7 @@ app.get("/products", (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = parseInt(req.query.limit) || 50;
 
-  const filePath = path.join(__dirname, "products.json");
+  const filePath = path.join(__dirname, "products_converted.json");
 
   fs.readFile(filePath, "utf8", (err, data) => {
     if (err) {
