@@ -1,0 +1,287 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "APL54-ESL Mock API",
+    "version": "1.0.0",
+    "description": "Mock ESL API for third-party client integration."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "object",
+            "properties": {
+              "code": { "type": "string" },
+              "message": { "type": "string" },
+              "details": { "type": "object" }
+            }
+          }
+        }
+      },
+      "TokenResponse": {
+        "type": "object",
+        "properties": {
+          "access_token": { "type": "string" },
+          "refresh_token": { "type": "string" },
+          "expires_in": { "type": "integer" },
+          "token_type": { "type": "string" }
+        }
+      },
+      "Site": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "location": { "type": "string" }
+        }
+      },
+      "EslTag": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "site_id": { "type": "string" },
+          "ap_id": { "type": "string", "nullable": true },
+          "mac_address": { "type": "string" },
+          "display_type": { "type": "string" },
+          "status": { "type": "string" },
+          "battery_level": { "type": "integer", "nullable": true },
+          "firmware_version": { "type": "string", "nullable": true },
+          "metadata": { "type": "object" },
+          "created_at": { "type": "string" },
+          "updated_at": { "type": "string" }
+        }
+      },
+      "JobSummary": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "site_id": { "type": "string" },
+          "job_type": { "type": "string" },
+          "status": { "type": "string" },
+          "total_count": { "type": "integer" },
+          "completed_count": { "type": "integer" },
+          "failed_count": { "type": "integer" },
+          "cancelled_count": { "type": "integer" },
+          "created_at": { "type": "string" },
+          "updated_at": { "type": "string" },
+          "finished_at": { "type": "string", "nullable": true }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/oauth/token": {
+      "post": {
+        "summary": "Get access token",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "grant_type": { "type": "string" },
+                  "client_id": { "type": "string" },
+                  "client_secret": { "type": "string" },
+                  "refresh_token": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Token issued",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TokenResponse" }
+              }
+            }
+          },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/v1/me": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Get client and sites",
+        "responses": {
+          "200": { "description": "OK" },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/v1/sites": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "List sites",
+        "responses": {
+          "200": { "description": "OK" }
+        }
+      }
+    },
+    "/api/v1/esl": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "List ESL tags",
+        "parameters": [
+          { "name": "site_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "page_size", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Register ESL tag",
+        "responses": {
+          "201": { "description": "Created" },
+          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+        }
+      }
+    },
+    "/api/v1/templates": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "List templates",
+        "parameters": [
+          { "name": "site_id", "in": "query", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "page_size", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/v1/templates/{template_id}/preview": {
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Preview template",
+        "parameters": [
+          { "name": "template_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "site_id": { "type": "string" },
+                  "payload": { "type": "object" }
+                },
+                "required": ["site_id", "payload"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/v1/templates/{template_id}/activate": {
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Activate template",
+        "parameters": [
+          { "name": "template_id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "site_id": { "type": "string" }
+                },
+                "required": ["site_id"]
+              }
+            }
+          }
+        },
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/v1/esl/{id}": {
+      "patch": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Update ESL tag",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      },
+      "delete": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Delete ESL tag",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "site_id", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/api/v1/esl/{id}/reset": {
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Reset ESL tag",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "202": { "description": "Accepted" } }
+      }
+    },
+    "/api/v1/esl/update": {
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Single ESL update",
+        "responses": { "202": { "description": "Accepted" } }
+      }
+    },
+    "/api/v1/esl/batch-update": {
+      "post": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Batch ESL update",
+        "responses": { "202": { "description": "Accepted" } }
+      }
+    },
+    "/api/v1/jobs/{id}": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Get job summary",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    },
+    "/api/v1/jobs/{id}/tasks": {
+      "get": {
+        "security": [{ "bearerAuth": [] }],
+        "summary": "Get job tasks",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer" } },
+          { "name": "page_size", "in": "query", "schema": { "type": "integer" } }
+        ],
+        "responses": { "200": { "description": "OK" } }
+      }
+    }
+  }
+}
