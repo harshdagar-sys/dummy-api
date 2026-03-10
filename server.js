@@ -215,6 +215,35 @@ app.post("/oauth/token", (req, res) => {
 // Swagger docs
 // ─────────────────────────────────────────────
 app.get("/swagger.json", (req, res) => res.json(swaggerDoc));
+
+// CDN-based Swagger UI to avoid static asset issues on serverless hosts
+app.get(["/docs", "/docs/"], (req, res) => {
+  res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.end(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>APL54-ESL Swagger</title>
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <style>
+      html, body { margin: 0; padding: 0; }
+    </style>
+  </head>
+  <body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: "/swagger.json",
+        dom_id: "#swagger-ui"
+      });
+    </script>
+  </body>
+</html>`);
+});
+
+// Keep local assets route (optional)
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
 // ─────────────────────────────────────────────
