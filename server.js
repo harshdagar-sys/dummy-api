@@ -58,10 +58,30 @@ const CLIENT = {
 
 const SITES = [
   {
-    id: crypto.randomUUID(),
+    id: '2b4be597-ce29-4eb5-a70b-c23ecb5f8c85', // static uuid
     name: "Store-1",
     location: "Demo Location"
-  }
+  },
+  {
+    id: '5f9e8d7c-6b5a-4c4d-9e8f-7d6e5f4a3b2c', // static uuid
+    name: "Store-2",
+    location: "Demo Location"
+  },
+  {
+    id: 'a1b2c3d4-e5f6-7890-a1b2-c3d4e5f67890', // static uuid
+    name: "Store-3",
+    location: "Demo Location"
+  },
+  {
+    id: 'b2c3d4e5-f6g7-8901-b2c3-d4e5f6g78901', // static uuid
+    name: "Store-4",
+    location: "Demo Location"
+  },
+  {
+    id: 'c3d4e5f6-g7h8-9012-c3d4-e5f6g7h89012', // static uuid
+    name: "Store-5",
+    location: "Demo Location"
+  },
 ];
 
 const ESL_TAGS = new Map();    // id -> tag
