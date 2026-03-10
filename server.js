@@ -52,7 +52,7 @@ app.get("/products", (req, res) => {
 // In-memory data stores
 // ─────────────────────────────────────────────
 const CLIENT = {
-  id: crypto.randomUUID(),
+  id: '17de3825-8bbd-468b-82e3-08d2ec111533', // static uuid 
   name: "Your Company"
 };
 
