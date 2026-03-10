@@ -3,7 +3,7 @@
   "info": {
     "title": "APL54-ESL Mock API",
     "version": "1.0.0",
-    "description": "Mock ESL API for third-party client integration."
+    "description": "Mock ESL API for third-party client integration (POS / Inventory / Pricing systems)."
   },
   "servers": [
     {
@@ -26,9 +26,9 @@
           "error": {
             "type": "object",
             "properties": {
-              "code": { "type": "string" },
-              "message": { "type": "string" },
-              "details": { "type": "object" }
+              "code": { "type": "string", "example": "VALIDATION_ERROR" },
+              "message": { "type": "string", "example": "Human readable summary" },
+              "details": { "type": "object", "example": { "field": "reason" } }
             }
           }
         }
@@ -38,48 +38,81 @@
         "properties": {
           "access_token": { "type": "string" },
           "refresh_token": { "type": "string" },
-          "expires_in": { "type": "integer" },
-          "token_type": { "type": "string" }
+          "expires_in": { "type": "integer", "example": 300 },
+          "token_type": { "type": "string", "example": "Bearer" }
+        }
+      },
+      "Client": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "Your Company" }
         }
       },
       "Site": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "name": { "type": "string" },
-          "location": { "type": "string" }
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "Store-1" },
+          "location": { "type": "string", "example": "Demo Location" }
         }
       },
       "EslTag": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "site_id": { "type": "string" },
-          "ap_id": { "type": "string", "nullable": true },
-          "mac_address": { "type": "string" },
-          "display_type": { "type": "string" },
-          "status": { "type": "string" },
-          "battery_level": { "type": "integer", "nullable": true },
-          "firmware_version": { "type": "string", "nullable": true },
-          "metadata": { "type": "object" },
-          "created_at": { "type": "string" },
-          "updated_at": { "type": "string" }
+          "id": { "type": "string", "format": "uuid" },
+          "site_id": { "type": "string", "format": "uuid" },
+          "ap_id": { "type": "string", "format": "uuid", "nullable": true },
+          "mac_address": { "type": "string", "example": "AA:BB:CC:DD:EE:FF" },
+          "display_type": { "type": "string", "example": "4.2_bw_400x300" },
+          "status": { "type": "string", "example": "inactive" },
+          "battery_level": { "type": "integer", "nullable": true, "example": 87 },
+          "firmware_version": { "type": "string", "nullable": true, "example": "1.0.2" },
+          "metadata": { "type": "object", "example": { "label": "Aisle 3 - Shelf 2" } },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "Template": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "name": { "type": "string", "example": "price-barcode-184x88" },
+          "display_type": { "type": "string", "example": "184x88" },
+          "version": { "type": "integer", "example": 1 },
+          "is_active": { "type": "boolean", "example": true }
         }
       },
       "JobSummary": {
         "type": "object",
         "properties": {
-          "id": { "type": "string" },
-          "site_id": { "type": "string" },
-          "job_type": { "type": "string" },
-          "status": { "type": "string" },
-          "total_count": { "type": "integer" },
-          "completed_count": { "type": "integer" },
-          "failed_count": { "type": "integer" },
-          "cancelled_count": { "type": "integer" },
-          "created_at": { "type": "string" },
-          "updated_at": { "type": "string" },
-          "finished_at": { "type": "string", "nullable": true }
+          "id": { "type": "string", "format": "uuid" },
+          "site_id": { "type": "string", "format": "uuid" },
+          "job_type": { "type": "string", "example": "batch" },
+          "status": { "type": "string", "example": "running" },
+          "total_count": { "type": "integer", "example": 100 },
+          "completed_count": { "type": "integer", "example": 60 },
+          "failed_count": { "type": "integer", "example": 2 },
+          "cancelled_count": { "type": "integer", "example": 0 },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" },
+          "finished_at": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "JobRef": {
+        "type": "object",
+        "properties": {
+          "job_id": { "type": "string", "format": "uuid" },
+          "status": { "type": "string", "example": "pending" },
+          "total_count": { "type": "integer", "example": 1 }
+        }
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "page": { "type": "integer", "example": 1 },
+          "page_size": { "type": "integer", "example": 20 },
+          "total": { "type": "integer", "example": 42 }
         }
       }
     }
@@ -87,18 +120,44 @@
   "paths": {
     "/oauth/token": {
       "post": {
-        "summary": "Get access token",
+        "tags": ["Auth"],
+        "summary": "Get or refresh access token",
+        "description": "Use `client_credentials` to get a new token pair, or `refresh_token` to renew an access token.",
         "requestBody": {
           "required": true,
           "content": {
             "application/x-www-form-urlencoded": {
               "schema": {
                 "type": "object",
+                "required": ["grant_type"],
                 "properties": {
-                  "grant_type": { "type": "string" },
-                  "client_id": { "type": "string" },
-                  "client_secret": { "type": "string" },
-                  "refresh_token": { "type": "string" }
+                  "grant_type": {
+                    "type": "string",
+                    "enum": ["client_credentials", "refresh_token"],
+                    "description": "OAuth2 grant type"
+                  },
+                  "client_id": {
+                    "type": "string",
+                    "description": "Required when grant_type=client_credentials"
+                  },
+                  "client_secret": {
+                    "type": "string",
+                    "description": "Required when grant_type=client_credentials"
+                  },
+                  "refresh_token": {
+                    "type": "string",
+                    "description": "Required when grant_type=refresh_token"
+                  }
+                }
+              },
+              "examples": {
+                "client_credentials": {
+                  "summary": "New token via client credentials",
+                  "value": "grant_type=client_credentials&client_id=YOUR_CLIENT_ID&client_secret=YOUR_SECRET"
+                },
+                "refresh_token": {
+                  "summary": "Refresh existing token",
+                  "value": "grant_type=refresh_token&refresh_token=YOUR_REFRESH_TOKEN"
                 }
               }
             }
@@ -113,68 +172,152 @@
               }
             }
           },
-          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } },
-          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "401": {
+            "description": "Unauthorized / invalid refresh token",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
         }
       }
     },
+
     "/api/v1/me": {
       "get": {
+        "tags": ["Discovery"],
+        "summary": "Get client info and sites",
+        "description": "Returns your client record and all sites you have access to. Use this to discover your `site_id` values.",
         "security": [{ "bearerAuth": [] }],
-        "summary": "Get client and sites",
         "responses": {
-          "200": { "description": "OK" },
-          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "client": { "$ref": "#/components/schemas/Client" },
+                        "sites": {
+                          "type": "array",
+                          "items": { "$ref": "#/components/schemas/Site" }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
         }
       }
     },
+
     "/api/v1/sites": {
       "get": {
-        "security": [{ "bearerAuth": [] }],
+        "tags": ["Discovery"],
         "summary": "List sites",
+        "security": [{ "bearerAuth": [] }],
         "responses": {
-          "200": { "description": "OK" }
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Site" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
         }
       }
     },
-    "/api/v1/esl": {
-      "get": {
-        "security": [{ "bearerAuth": [] }],
-        "summary": "List ESL tags",
-        "parameters": [
-          { "name": "site_id", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer" } },
-          { "name": "page_size", "in": "query", "schema": { "type": "integer" } }
-        ],
-        "responses": { "200": { "description": "OK" } }
-      },
-      "post": {
-        "security": [{ "bearerAuth": [] }],
-        "summary": "Register ESL tag",
-        "responses": {
-          "201": { "description": "Created" },
-          "400": { "description": "Validation error", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } } }
-        }
-      }
-    },
+
     "/api/v1/templates": {
       "get": {
+        "tags": ["Templates"],
+        "summary": "List templates for a site",
         "security": [{ "bearerAuth": [] }],
-        "summary": "List templates",
         "parameters": [
-          { "name": "site_id", "in": "query", "required": true, "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer" } },
-          { "name": "page_size", "in": "query", "schema": { "type": "integer" } }
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" },
+            "description": "Site ID to list templates for"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20 }
+          }
         ],
-        "responses": { "200": { "description": "OK" } }
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Template" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "site_id not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     },
+
     "/api/v1/templates/{template_id}/preview": {
       "post": {
+        "tags": ["Templates"],
+        "summary": "Preview a template with sample payload",
+        "description": "Renders the template with given payload data and returns a base64-encoded PNG image. Use this to validate the display layout before sending an ESL update.",
         "security": [{ "bearerAuth": [] }],
-        "summary": "Preview template",
         "parameters": [
-          { "name": "template_id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -182,24 +325,274 @@
             "application/json": {
               "schema": {
                 "type": "object",
+                "required": ["site_id", "payload"],
                 "properties": {
-                  "site_id": { "type": "string" },
-                  "payload": { "type": "object" }
-                },
-                "required": ["site_id", "payload"]
+                  "site_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Site ID"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "description": "Template variable data for preview",
+                    "properties": {
+                      "currency": { "type": "string", "example": "$" },
+                      "price": { "type": "number", "example": 99.99 },
+                      "product_id": { "type": "string", "example": "1234567890123" }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "site_id": "uuid",
+                "payload": {
+                  "currency": "$",
+                  "price": 99.99,
+                  "product_id": "1234567890123"
+                }
               }
             }
           }
         },
-        "responses": { "200": { "description": "OK" } }
+        "responses": {
+          "200": {
+            "description": "Preview image returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "template_id": { "type": "string", "format": "uuid" },
+                        "content_type": { "type": "string", "example": "image/png" },
+                        "image_base64": { "type": "string", "description": "Base64-encoded PNG image" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "Template or site not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     },
+
     "/api/v1/templates/{template_id}/activate": {
       "post": {
+        "tags": ["Templates"],
+        "summary": "Activate a template for a site",
+        "description": "Activates the template for the given site. Only one template per display_type can be active at a time within a site.",
         "security": [{ "bearerAuth": [] }],
-        "summary": "Activate template",
         "parameters": [
-          { "name": "template_id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["site_id"],
+                "properties": {
+                  "site_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Site ID to activate template for"
+                  }
+                }
+              },
+              "example": {
+                "site_id": "uuid"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Template activated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "template_id": { "type": "string", "format": "uuid" },
+                        "display_type": { "type": "string", "example": "184x88" },
+                        "is_active": { "type": "boolean", "example": true },
+                        "activated_at": { "type": "string", "format": "date-time" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "Template or site not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+
+    "/api/v1/esl": {
+      "get": {
+        "tags": ["ESL Tags"],
+        "summary": "List ESL tags in a site",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 50 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/EslTag" }
+                    },
+                    "meta": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      },
+      "post": {
+        "tags": ["ESL Tags"],
+        "summary": "Register a new ESL tag",
+        "description": "Registers a new ESL tag in the backend database and optionally assigns it to an AP.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["site_id", "mac_address", "display_type"],
+                "properties": {
+                  "site_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Site the tag belongs to"
+                  },
+                  "ap_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Access point to assign this tag to (optional)"
+                  },
+                  "mac_address": {
+                    "type": "string",
+                    "description": "Hardware MAC address of the ESL tag",
+                    "example": "AA:BB:CC:DD:EE:FF"
+                  },
+                  "display_type": {
+                    "type": "string",
+                    "description": "Display model / resolution identifier",
+                    "example": "4.2_bw_400x300"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "description": "Arbitrary metadata (e.g. shelf label)",
+                    "example": { "label": "Aisle 3 - Shelf 2" }
+                  }
+                }
+              },
+              "example": {
+                "site_id": "uuid",
+                "ap_id": "uuid",
+                "mac_address": "AA:BB:CC:DD:EE:FF",
+                "display_type": "4.2_bw_400x300",
+                "metadata": { "label": "Aisle 3 - Shelf 2" }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "ESL tag registered",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/EslTag" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "site_id not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
+      }
+    },
+
+    "/api/v1/esl/{id}": {
+      "patch": {
+        "tags": ["ESL Tags"],
+        "summary": "Update ESL tag",
+        "description": "Updates tag metadata or AP assignment. Send only the fields you want to change.",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
         ],
         "requestBody": {
           "required": true,
@@ -208,79 +601,427 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "site_id": { "type": "string" }
-                },
-                "required": ["site_id"]
+                  "ap_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "nullable": true,
+                    "description": "Assign to a different AP"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Tag status",
+                    "example": "active"
+                  },
+                  "metadata": {
+                    "type": "object",
+                    "description": "Updated metadata",
+                    "example": { "label": "Aisle 3 - Shelf 5" }
+                  }
+                }
+              },
+              "example": {
+                "ap_id": "uuid",
+                "status": "active",
+                "metadata": { "label": "Aisle 3 - Shelf 5" }
               }
             }
           }
         },
-        "responses": { "200": { "description": "OK" } }
-      }
-    },
-    "/api/v1/esl/{id}": {
-      "patch": {
-        "security": [{ "bearerAuth": [] }],
-        "summary": "Update ESL tag",
-        "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
-        ],
-        "responses": { "200": { "description": "OK" } }
+        "responses": {
+          "200": {
+            "description": "Updated tag",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/EslTag" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "ESL tag not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       },
       "delete": {
+        "tags": ["ESL Tags"],
+        "summary": "Delete ESL tag from DB",
+        "description": "Removes the ESL tag record from the database. This is DB-only and does NOT send any command to the physical tag. Recommended flow: reset the tag first, wait for job completion, then delete.",
         "security": [{ "bearerAuth": [] }],
-        "summary": "Delete ESL tag",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "site_id", "in": "query", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
         ],
-        "responses": { "204": { "description": "No Content" } }
+        "responses": {
+          "204": { "description": "Deleted (no body)" },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "ESL tag not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "409": {
+            "description": "Tag has active jobs",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     },
+
     "/api/v1/esl/{id}/reset": {
       "post": {
+        "tags": ["ESL Tags"],
+        "summary": "Reset ESL tag (device reset)",
+        "description": "Sends a reset command to the ESL tag via its assigned AP. This is asynchronous — track progress with GET /jobs/{job_id}. Does NOT delete the tag from the database. Returns 409 if the tag has no assigned AP.",
         "security": [{ "bearerAuth": [] }],
-        "summary": "Reset ESL tag",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
         ],
-        "responses": { "202": { "description": "Accepted" } }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["site_id"],
+                "properties": {
+                  "site_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Site ID the tag belongs to"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "nullable": true,
+                    "description": "Optional audit reason for the reset",
+                    "example": "device swap"
+                  }
+                }
+              },
+              "example": {
+                "site_id": "uuid",
+                "reason": "device swap"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Reset job accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/JobRef" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "ESL tag or site not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "409": {
+            "description": "AP not assigned to tag",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     },
+
     "/api/v1/esl/update": {
       "post": {
-        "security": [{ "bearerAuth": [] }],
+        "tags": ["ESL Updates"],
         "summary": "Single ESL update",
-        "responses": { "202": { "description": "Accepted" } }
+        "description": "Sends a display update to a single ESL tag using a specific template and payload. Returns a job to track progress.",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["site_id", "esl_id", "template_id", "payload"],
+                "properties": {
+                  "site_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Site ID"
+                  },
+                  "esl_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Target ESL tag ID"
+                  },
+                  "template_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Template to render on the tag"
+                  },
+                  "payload": {
+                    "type": "object",
+                    "description": "Template variable data to display",
+                    "properties": {
+                      "name": { "type": "string", "example": "Product Name" },
+                      "price": { "type": "number", "example": 99.99 },
+                      "ean": { "type": "string", "example": "1234567890123" }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "site_id": "uuid",
+                "esl_id": "uuid",
+                "template_id": "uuid",
+                "payload": {
+                  "name": "Product Name",
+                  "price": 99.99,
+                  "ean": "1234567890123"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Update job accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/JobRef" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "site_id not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     },
+
     "/api/v1/esl/batch-update": {
       "post": {
+        "tags": ["ESL Updates"],
+        "summary": "Batch ESL update (up to 1000 tags)",
+        "description": "Sends display updates to multiple ESL tags in a single job. Each item specifies its own ESL ID, template, and payload. Maximum 1000 items per request.",
         "security": [{ "bearerAuth": [] }],
-        "summary": "Batch ESL update",
-        "responses": { "202": { "description": "Accepted" } }
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["site_id", "items"],
+                "properties": {
+                  "site_id": {
+                    "type": "string",
+                    "format": "uuid",
+                    "description": "Site ID"
+                  },
+                  "items": {
+                    "type": "array",
+                    "maxItems": 1000,
+                    "description": "List of ESL update items (max 1000)",
+                    "items": {
+                      "type": "object",
+                      "required": ["esl_id", "template_id", "payload"],
+                      "properties": {
+                        "esl_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Target ESL tag ID"
+                        },
+                        "template_id": {
+                          "type": "string",
+                          "format": "uuid",
+                          "description": "Template to render"
+                        },
+                        "payload": {
+                          "type": "object",
+                          "description": "Template variable data",
+                          "properties": {
+                            "name": { "type": "string", "example": "Product A" },
+                            "price": { "type": "number", "example": 10.00 },
+                            "ean": { "type": "string", "example": "1234567890001" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              },
+              "example": {
+                "site_id": "uuid",
+                "items": [
+                  {
+                    "esl_id": "uuid-1",
+                    "template_id": "uuid",
+                    "payload": { "name": "A", "price": 10 }
+                  },
+                  {
+                    "esl_id": "uuid-2",
+                    "template_id": "uuid",
+                    "payload": { "name": "B", "price": 20 }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Batch update job accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/JobRef" }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          },
+          "404": {
+            "description": "site_id not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     },
+
     "/api/v1/jobs/{id}": {
       "get": {
-        "security": [{ "bearerAuth": [] }],
+        "tags": ["Jobs"],
         "summary": "Get job summary",
+        "description": "Returns overall progress of an async job. Poll this endpoint until status is completed, partial_failed, failed, or cancelled.",
+        "security": [{ "bearerAuth": [] }],
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          }
         ],
-        "responses": { "200": { "description": "OK" } }
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": { "$ref": "#/components/schemas/JobSummary" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     },
+
     "/api/v1/jobs/{id}/tasks": {
       "get": {
+        "tags": ["Jobs"],
+        "summary": "Get task-level details for a job",
+        "description": "Returns individual task results. Useful for debugging or reconciliation after a batch update.",
         "security": [{ "bearerAuth": [] }],
-        "summary": "Get job tasks",
         "parameters": [
-          { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } },
-          { "name": "page", "in": "query", "schema": { "type": "integer" } },
-          { "name": "page_size", "in": "query", "schema": { "type": "integer" } }
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string", "format": "uuid" }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "schema": { "type": "integer", "default": 50 }
+          }
         ],
-        "responses": { "200": { "description": "OK" } }
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": { "type": "string", "format": "uuid" },
+                          "esl_id": { "type": "string", "format": "uuid" },
+                          "template_id": { "type": "string", "format": "uuid", "nullable": true },
+                          "payload": { "type": "object", "nullable": true },
+                          "status": { "type": "string", "example": "pending" }
+                        }
+                      }
+                    },
+                    "meta": { "$ref": "#/components/schemas/Pagination" }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found",
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+          }
+        }
       }
     }
   }
