@@ -620,7 +620,11 @@ api.get("/jobs/:id/tasks", (req, res) => {
 // ─────────────────────────────────────────────
 app.use("/api/v1", api);
 
-app.listen(PORT, () => {
-  console.log(`Mock ESL API running on port ${PORT}`);
-  console.log(`Swagger UI: http://localhost:${PORT}/docs`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`Mock ESL API running on port ${PORT}`);
+    console.log(`Swagger UI: http://localhost:${PORT}/docs`);
+  });
+}
+
+module.exports = app;
